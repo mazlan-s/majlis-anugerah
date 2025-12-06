@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Tempat Duduk Majlis Anugerah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ========================================
+// CONFIGURATION - IMPORTANT: UPDATE THIS!
+// ========================================
+const API_URL = "https://script.google.com/macros/s/AKfycbxJjSXc32_aOz3k3r2ol_3DUYZo1WJsDJlfYdJdzuhoxxXyNrYl4waJPt1qF2Ks7n8V/exec";
+const USE_SAMPLE_DATA = true; // Set false bila dah ready connect Google Sheets
+
+// Sample data untuk testing
+const SAMPLE_GUESTS = [
+    { nama: "Dr Ahmad bin Ali", no_telefon: "", anugerah: "Penulis Terbaik", universiti: "UM", no_meja: "VIP 1", no_kerusi: "3", status_hadir: "Belum", masa_hadir: "" },
+    { nama: "Prof Siti Aminah", no_telefon: "", anugerah: "Anugerah Khas", universiti: "UKM", no_meja: "VIP 2", no_kerusi: "2", status_hadir: "Belum", masa_hadir: "" },
+    { nama: "Dr Mohd Razali", no_telefon: "", anugerah: "Karya Terbaik", universiti: "USM", no_meja: "Meja 12", no_kerusi: "4", status_hadir: "Belum", masa_hadir: "" },
+    { nama: "Prof Nurul Huda", no_telefon: "", anugerah: "Inovasi Penulisan", universiti: "UPM", no_meja: "Meja 5", no_kerusi: "5", status_hadir: "Belum", masa_hadir: "" },
+    { nama: "Dr Azman Ibrahim", no_telefon: "", anugerah: "Sumbangan Cemerlang", universiti: "UTM", no_meja: "Meja 18", no_kerusi: "2", status_hadir: "Belum", masa_hadir: "" },
+];
+
+// State management
+let state = {
+    currentView: 'search',
+    guests: [],
+    selectedGuest: null,
+    attendedGuests: [],
+    currentIndex: 0
+};
+
+// Table positions
+function getTablePosition(tableName) {
+    const positions = {
+        "VIP 1": { x: 22, y: 22 }, "VIP 2": { x: 42, y: 22 }, "VIP 3": { x: 62, y: 22 },
+        "Meja 1": { x: 20, y: 34 }, "Meja 2": { x: 36, y: 34 }, "Meja 3": { x: 52, y: 34 }, "Meja 4": { x: 68, y: 34 },
+        "Meja 5": { x: 20, y: 46 }, "Meja 6": { x: 36, y: 46 }, "Meja 7": { x: 52, y: 46 }, "Meja 8": { x: 68, y: 46 },
+        "Meja 9": { x: 20, y: 58 }, "Meja 10": { x: 36, y: 58 }, "Meja 11": { x: 52, y: 58 }, "Meja 12": { x: 68, y: 58 },
+        "Meja 13": { x: 20, y: 70 }, "Meja 14": { x: 36, y: 70 }, "Meja 15": { x: 52, y: 70 }, "Meja 16": { x: 68, y: 70 },
+        "Meja 17": { x: 20, y: 82 }, "Meja 18": { x: 36, y: 82 }, "Meja 19": { x: 52, y: 82 }, "Meja 20": { x: 68, y: 82 },
+        "Meja 21": { x: 14, y: 92 }, "Meja 22": { x: 28, y: 92 }, "Meja 23": { x: 42, y: 92 }, "Meja 24": { x: 56, y: 92 }, "Meja 25": { x: 70, y: 92 }
+    };
+    return positions[tableName] || { x: 50, y: 50 };
+}
+
+// API Functions
+async function fetchGuests() {
+    if (USE_SAMPLE_DATA) return SAMPLE_GUESTS;
+    try {
+        const response = await fetch(API_URL + '?action=getGuests');
+        const data = await response.json();
+        return data.success ? data.data : SAMPLE_GUESTS;
+    } catch (error) {
+        console.error('Error:', error);
+        return SAMPLE_GUESTS;
+    }
+}
+
+async function markAttendance(guestName) {
+    const timestamp = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const guest = state.guests.find(g => g.nama === guestName);
+    if (guest) {
+        state.attendedGuests = [{ ...guest, masa_hadir: timestamp }, ...state.attendedGuests];
+        state.currentIndex = 0;
+    }
+    if (!USE_SAMPLE_DATA) {
+        try {
+            await fetch(API_URL + '?action=markAttendance&name=' + encodeURIComponent(guestName));
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+}
+
+// Render Functions
+function renderSearchScreen() {
+    return `
+        <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div class="max-w-md mx-auto pt-20">
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <div class="text-center mb-8">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-2">Majlis Anugerah Penulis</h1>
+                        <p class="text-gray-600">Cari tempat duduk anda</p>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Nama Tetamu</label>
+                        <select id="guestSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="">-- Pilih Nama --</option>
+                            ${state.guests.map(g => '<option value="' + g.nama + '">' + g.nama + '</option>').join('')}
+                        </select>
+                    </div>
+                    <button onclick="handleSearch()" id="searchBtn" disabled class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-300">
+                        🔍 Cari Tempat Duduk
+                    </button>
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-gray-700">💡 <strong>Nota:</strong> Pilih nama anda dari senarai.</p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <button onclick="showUrusetiaPanel()" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
+                            ✓ Panel Urusetia
+                        </button>
+                        <p class="text-xs text-gray-500 text-center mt-2">Untuk penyambut tetamu sahaja</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLayoutScreen() {
+    const g = state.selectedGuest;
+    const pos = getTablePosition(g.no_meja);
+    return `
+        <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 sticky top-4 z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">${g.nama}</h2>
+                            <p class="text-gray-600">${g.anugerah}</p>
+                            <p class="text-sm text-gray-500">${g.universiti}</p>
+                        </div>
+                        <div class="text-green-500 text-4xl">✓</div>
+                    </div>
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-center">
+                        <p class="text-white text-sm mb-2 opacity-90">Tunjukkan kepada Usher</p>
+                        <div class="text-white text-5xl font-bold mb-1">${g.no_meja}</div>
+                        <div class="text-white text-3xl font-semibold">KERUSI ${g.no_kerusi}</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📍 Layout Dewan</h3>
+                    <div class="bg-gray-50 rounded-xl p-8 overflow-x-auto">
+                        ${renderSVG(g, pos)}
+                    </div>
+                    <div class="mt-6 flex flex-wrap gap-4 justify-center text-sm">
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 bg-blue-600 rounded"></div><span>Meja Anda</span></div>
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 bg-yellow-400 rounded"></div><span>Kerusi Anda</span></div>
+                        <div class="flex items-center gap-2"><div class="w-4 h-4 bg-red-500 rounded-full"></div><span>Pintu Masuk</span></div>
+                    </div>
+                </div>
+                <button onclick="backToSearch()" class="mt-6 w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    Cari Tetamu Lain
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderSVG(target, targetPos) {
+    let svg = '<svg viewBox="0 0 100 100" style="min-height:900px" class="w-full">';
+    svg += '<rect x="10" y="2" width="80" height="12" fill="#e5e7eb" stroke="#9ca3af" stroke-width="0.5" rx="1"/>';
+    svg += '<text x="50" y="8.5" text-anchor="middle" font-size="2.5" fill="#374151" font-weight="bold">PENTAS UTAMA</text>';
+    svg += '<rect x="12" y="6" width="3" height="4" fill="#d1d5db" stroke="#6b7280" stroke-width="0.4"/>';
+    svg += '<text x="13.5" y="8.5" text-anchor="middle" font-size="1" fill="#374151" font-weight="bold">R1</text>';
+    svg += '<rect x="75" y="4" width="10" height="2" fill="#d1d5db" stroke="#6b7280" stroke-width="0.3"/>';
+    svg += '<rect x="75" y="7" width="10" height="2" fill="#d1d5db" stroke="#6b7280" stroke-width="0.3"/>';
+    svg += '<rect x="86" y="16" width="3" height="4" fill="#d1d5db" stroke="#6b7280" stroke-width="0.4"/>';
+    svg += '<text x="87.5" y="18.5" text-anchor="middle" font-size="1" fill="#374151" font-weight="bold">R2</text>';
+    svg += '<circle cx="85" cy="34" r="1.5" fill="#ef4444" class="animate-pulse"/>';
+    svg += '<text x="85" y="37" text-anchor="middle" font-size="1.5" fill="#ef4444" font-weight="bold">PINTU MASUK</text>';
+    
+    ['VIP 1','VIP 2','VIP 3'].forEach(table => {
+        const p = getTablePosition(table);
+        const isT = table === target.no_meja;
+        const angles = table === 'VIP 2' ? [30,60,90,120,150] : [0,45,90,135,180,225,270,315];
+        svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="6" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.8':'0.5')+'" '+(isT?'class="animate-pulse"':'')+'/>';
+        svg += '<text x="'+p.x+'" y="'+(p.y-0.8)+'" text-anchor="middle" font-size="1.6" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">MEJA</text>';
+        svg += '<text x="'+p.x+'" y="'+(p.y+1.5)+'" text-anchor="middle" font-size="2" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">'+table.replace('VIP ','')+'</text>';
+        angles.forEach((a,i) => {
+            const isTS = isT && (i+1).toString() === target.no_kerusi;
+            const r = (a * Math.PI) / 180;
+            const sx = p.x + 7.5 * Math.cos(r);
+            const sy = p.y + 7.5 * Math.sin(r);
+            svg += '<rect x="'+(sx-0.9)+'" y="'+(sy-0.9)+'" width="1.8" height="1.8" fill="'+(isTS?'#fbbf24':'#e5e7eb')+'" stroke="'+(isTS?'#f59e0b':'#9ca3af')+'" stroke-width="0.3" rx="0.3"/>';
+        });
+    });
+    
+    for(let i=1;i<=25;i++){
+        const table = 'Meja '+i;
+        const p = getTablePosition(table);
+        const isT = table === target.no_meja;
+        svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="4.5" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.6':'0.4')+'" '+(isT?'class="animate-pulse"':'')+'/>';
+        svg += '<text x="'+p.x+'" y="'+(p.y+0.8)+'" text-anchor="middle" font-size="2.5" fill="'+(isT?'#fff':'#374151')+'" font-weight="'+(isT?'bold':'normal')+'">'+i+'</text>';
+        [0,45,90,135,180,225,270,315].forEach((a,idx) => {
+            const isTS = isT && (idx+1).toString() === target.no_kerusi;
+            const r = (a * Math.PI) / 180;
+            const sx = p.x + 6 * Math.cos(r);
+            const sy = p.y + 6 * Math.sin(r);
+            svg += '<rect x="'+(sx-0.65)+'" y="'+(sy-0.65)+'" width="1.3" height="1.3" fill="'+(isTS?'#fbbf24':'#e5e7eb')+'" stroke="'+(isTS?'#f59e0b':'#9ca3af')+'" stroke-width="0.25" rx="0.2"/>';
+        });
+    }
+    
+    svg += '<defs><marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><polygon points="0 0, 10 3, 0 6" fill="#ef4444"/></marker></defs>';
+    svg += '<path d="M 85 34 L '+targetPos.x+' '+targetPos.y+'" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="3,2" class="animate-pulse" opacity="0.9"/>';
+    svg += '</svg>';
+    return svg;
+}
+
+function renderUrusetiaPanel() {
+    const c = state.attendedGuests[state.currentIndex];
+    let html = '<div class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4"><div class="max-w-6xl mx-auto">';
+    html += '<div class="bg-white rounded-2xl shadow-xl p-6 mb-6"><div class="flex items-center justify-between">';
+    html += '<div><h1 class="text-3xl font-bold text-gray-800">Panel Urusetia</h1><p class="text-gray-600">Monitor Kehadiran Real-time</p></div>';
+    html += '<div class="text-right"><div class="text-4xl font-bold text-green-600">'+state.attendedGuests.length+'</div><div class="text-sm text-gray-600">Tetamu Hadir</div></div>';
+    html += '</div></div>';
+    
+    if(c) {
+        html += '<div class="bg-white rounded-2xl shadow-xl p-8 mb-6">';
+        html += '<div class="flex items-center justify-between mb-6">';
+        html += '<button onclick="prevGuest()" '+(state.currentIndex>=state.attendedGuests.length-1?'disabled':'')+' class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 transition">← Sebelum</button>';
+        html += '<div class="text-center"><div class="text-sm text-gray-500 mb-2">Tetamu '+(state.currentIndex+1)+' daripada '+state.attendedGuests.length+'</div>';
+        html += '<div class="text-lg font-semibold text-gray-700">Hadir: '+c.masa_hadir+'</div></div>';
+        html += '<button onclick="nextGuest()" '+(state.currentIndex<=0?'disabled':'')+' class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 transition">Selepas →</button>';
+        html += '</div>';
+        html += '<div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-8 border-2 border-green-200">';
+        html += '<div class="grid grid-cols-2 gap-6 mb-6">';
+        html += '<div><div class="text-sm text-gray-600 mb-1">Nama</div><div class="text-2xl font-bold text-gray-800">'+c.nama+'</div></div>';
+        html += '<div><div class="text-sm text-gray-600 mb-1">Anugerah</div><div class="text-xl font-semibold text-gray-700">'+c.anugerah+'</div></div>';
+        html += '<div><div class="text-sm text-gray-600 mb-1">Universiti</div><div class="text-xl font-semibold text-gray-700">'+c.universiti+'</div></div>';
+        html += '<div><div class="text-sm text-gray-600 mb-1">Masa Hadir</div><div class="text-xl font-semibold text-green-700">'+c.masa_hadir+'</div></div>';
+        html += '</div>';
+        html += '<div class="grid grid-cols-2 gap-4">';
+        html += '<div class="bg-blue-600 rounded-xl p-6 text-center"><div class="text-white text-sm mb-2 opacity-90">No Meja</div><div class="text-white text-5xl font-bold">'+c.no_meja+'</div></div>';
+        html += '<div class="bg-indigo-600 rounded-xl p-6 text-center"><div class="text-white text-sm mb-2 opacity-90">No Kerusi</div><div class="text-white text-5xl font-bold">'+c.no_kerusi+'</div></div>';
+        html += '</div></div></div>';
+    } else {
+        html += '<div class="bg-white rounded-2xl shadow-xl p-12 mb-6 text-center"><div class="text-gray-400 text-xl">Tiada tetamu hadir lagi</div></div>';
+    }
+    
+    html += '<div class="bg-white rounded-2xl shadow-xl p-6 mb-6"><h2 class="text-xl font-bold text-gray-800 mb-4">Senarai Penuh Kehadiran</h2>';
+    if(state.attendedGuests.length>0) {
+        html += '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bil</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Masa</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nama</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Anugerah</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Universiti</th>';
+        html += '<th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Meja</th>';
+        html += '<th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Kerusi</th>';
+        html += '</tr></thead><tbody class="divide-y divide-gray-200">';
+        state.attendedGuests.forEach((g,i) => {
+            html += '<tr class="hover:bg-gray-50 cursor-pointer '+(i===state.currentIndex?'bg-green-50':'')+'" onclick="jumpToGuest('+i+')">';
+            html += '<td class="px-4 py-3 text-sm text-gray-900">'+(i+1)+'</td>';
+            html += '<td class="px-4 py-3 text-sm text-gray-600">'+g.masa_hadir+'</td>';
+            html += '<td class="px-4 py-3 text-sm font-medium text-gray-900">'+g.nama+'</td>';
+            html += '<td class="px-4 py-3 text-sm text-gray-600">'+g.anugerah+'</td>';
+            html += '<td class="px-4 py-3 text-sm text-gray-600">'+g.universiti+'</td>';
+            html += '<td class="px-4 py-3 text-sm text-center font-semibold text-blue-600">'+g.no_meja+'</td>';
+            html += '<td class="px-4 py-3 text-sm text-center font-semibold text-indigo-600">'+g.no_kerusi+'</td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+    } else {
+        html += '<div class="text-center py-12 text-gray-400">Tiada rekod</div>';
+    }
+    html += '</div>';
+    
+    html += '<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">';
+    html += '<div class="text-sm font-semibold text-yellow-800 mb-2">Demo Mode - Simulasi</div><div class="flex gap-2 flex-wrap">';
+    state.guests.forEach(g => {
+        html += '<button onclick="simulateAttendance(\''+g.nama+'\')" class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded text-sm hover:bg-yellow-300">+ '+g.nama.split(' ')[0]+'</button>';
+    });
+    html += '</div></div>';
+    
+    html += '<button onclick="backToSearch()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">Kembali</button>';
+    html += '</div></div>';
+    return html;
+}
+
+// Event Handlers
+function handleSearch() {
+    const sel = document.getElementById('guestSelect');
+    if(sel.value) {
+        state.selectedGuest = state.guests.find(g => g.nama === sel.value);
+        if(state.selectedGuest) {
+            markAttendance(sel.value);
+            state.currentView = 'layout';
+            render();
+        }
+    }
+}
+
+function showUrusetiaPanel() {
+    state.currentView = 'urusetia';
+    render();
+}
+
+function backToSearch() {
+    state.currentView = 'search';
+    state.selectedGuest = null;
+    render();
+}
+
+function prevGuest() {
+    if(state.currentIndex < state.attendedGuests.length - 1) {
+        state.currentIndex++;
+        render();
+    }
+}
+
+function nextGuest() {
+    if(state.currentIndex > 0) {
+        state.currentIndex--;
+        render();
+    }
+}
+
+function jumpToGuest(i) {
+    state.currentIndex = i;
+    render();
+}
+
+function simulateAttendance(name) {
+    markAttendance(name);
+    render();
+}
+
+// Main Render
+function render() {
+    const app = document.getElementById('app');
+    if(state.currentView === 'search') {
+        app.innerHTML = renderSearchScreen();
+        const sel = document.getElementById('guestSelect');
+        const btn = document.getElementById('searchBtn');
+        sel.addEventListener('change', () => { btn.disabled = !sel.value; });
+    } else if(state.currentView === 'layout') {
+        app.innerHTML = renderLayoutScreen();
+    } else if(state.currentView === 'urusetia') {
+        app.innerHTML = renderUrusetiaPanel();
+    }
+}
+
+// Initialize
+async function init() {
+    const params = new URLSearchParams(window.location.search);
+    state.guests = await fetchGuests();
+    
+    if(params.get('urusetia') === 'true') {
+        state.currentView = 'urusetia';
+    } else if(params.get('guest')) {
+        const g = state.guests.find(x => x.nama.toLowerCase().includes(params.get('guest').toLowerCase()));
+        if(g) {
+            state.selectedGuest = g;
+            state.currentView = 'layout';
+            markAttendance(g.nama);
+        }
+    }
+    render();
+}
+
+init();
+</script>
+
+</body>
+</html>
