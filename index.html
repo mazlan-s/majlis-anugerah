@@ -181,8 +181,8 @@ function renderSVG(target, targetPos) {
     
     // PENTING: VIP 2 ada 5 kerusi, VIP 1 & 3 ada 8 kerusi
     const angles = table === 'VIP 2' 
-        ? [90, 45, 135, 180, 0]//, 144, 216, 288]  // 5 kerusi untuk VIP 2 (360/5 = 72 degrees)
-        : [0, 45, 90, 135, 180, 225, 270, 315];  // 8 kerusi untuk VIP 1 & 3
+        ? [90, 45, 135, 0, 180]//, 144, 216, 288]  // 5 kerusi untuk VIP 2 (360/5 = 72 degrees)
+        : [90, 45, 0, 315, 270, 225, 180, 135];  // 8 kerusi untuk VIP 1 & 3
     
     svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="6" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.8':'0.5')+'" '+(isT?'class="animate-pulse"':'')+'/>';
     svg += '<text x="'+p.x+'" y="'+(p.y-0.8)+'" text-anchor="middle" font-size="1.6" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">MEJA</text>';
@@ -206,7 +206,7 @@ function renderSVG(target, targetPos) {
         const isT = table === target.no_meja;
         svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="4.5" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.6':'0.4')+'" '+(isT?'class="animate-pulse"':'')+'/>';
         svg += '<text x="'+p.x+'" y="'+(p.y+0.8)+'" text-anchor="middle" font-size="2.5" fill="'+(isT?'#fff':'#374151')+'" font-weight="'+(isT?'bold':'normal')+'">'+i+'</text>';
-        [0,45,90,135,180,225,270,315].forEach((a,idx) => {
+        [90, 45, 0, 315, 270, 225, 180, 135].forEach((a,idx) => {
             const isTS = isT && (idx+1).toString() === target.no_kerusi;
             const r = (a * Math.PI) / 180;
             const sx = p.x + 6 * Math.cos(r);
