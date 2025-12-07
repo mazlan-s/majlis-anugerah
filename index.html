@@ -296,15 +296,15 @@ function handleSearch() {
     }
 }
 
-function showUrusetiaPanel() {
-    const password = prompt("Masukkan password urusetia:");
-    if (password === "admin") { // Simple password dulu
-        state.currentView = 'urusetia';
-        render();
-    } else if (password !== null) {
-        alert("❌ Password salah! Cuba lagi.");
-    }
-}
+//function showUrusetiaPanel() {
+//    const password = prompt("Masukkan password urusetia:");
+//    if (password === "admin") { // Simple password dulu
+//        state.currentView = 'urusetia';
+//        render();
+//    } else if (password !== null) {
+//        alert("❌ Password salah! Cuba lagi.");
+//    }
+//}
 
 function backToSearch() {
     state.currentView = 'search';
