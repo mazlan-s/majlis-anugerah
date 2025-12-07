@@ -297,8 +297,13 @@ function handleSearch() {
 }
 
 function showUrusetiaPanel() {
-    state.currentView = 'urusetia';
-    render();
+    const password = prompt("Masukkan password urusetia:");
+    if (password === "majlis2024") { // Ganti dengan password anda
+        state.currentView = 'urusetia';
+        render();
+    } else if (password !== null) {
+        alert("Password salah!");
+    }
 }
 
 function backToSearch() {
