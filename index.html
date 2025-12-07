@@ -181,7 +181,7 @@ function renderSVG(target, targetPos) {
     
     // PENTING: VIP 2 ada 5 kerusi, VIP 1 & 3 ada 8 kerusi
     const angles = table === 'VIP 2' 
-        ? [0, 72, 144, 216, 288]  // 5 kerusi untuk VIP 2 (360/5 = 72 degrees)
+        ? [0, 72]//, 144, 216, 288]  // 5 kerusi untuk VIP 2 (360/5 = 72 degrees)
         : [0, 45, 90, 135, 180, 225, 270, 315];  // 8 kerusi untuk VIP 1 & 3
     
     svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="6" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.8':'0.5')+'" '+(isT?'class="animate-pulse"':'')+'/>';
