@@ -175,21 +175,30 @@ function renderSVG(target, targetPos) {
     svg += '<circle cx="85" cy="34" r="1.5" fill="#ef4444" class="animate-pulse"/>';
     svg += '<text x="85" y="37" text-anchor="middle" font-size="1.5" fill="#ef4444" font-weight="bold">PINTU MASUK</text>';
     
-    ['VIP 1','VIP 2','VIP 3'].forEach(table => {
-        const p = getTablePosition(table);
-        const isT = table === target.no_meja;
-        const angles = table === 'VIP 2' ? [30,60,90,120,150] : [0,45,90,135,180,225,270,315];
-        svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="6" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.8':'0.5')+'" '+(isT?'class="animate-pulse"':'')+'/>';
-        svg += '<text x="'+p.x+'" y="'+(p.y-0.8)+'" text-anchor="middle" font-size="1.6" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">MEJA</text>';
-        svg += '<text x="'+p.x+'" y="'+(p.y+1.5)+'" text-anchor="middle" font-size="2" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">'+table.replace('VIP ','')+'</text>';
-        angles.forEach((a,i) => {
-            const isTS = isT && (i+1).toString() === target.no_kerusi;
-            const r = (a * Math.PI) / 180;
-            const sx = p.x + 7.5 * Math.cos(r);
-            const sy = p.y + 7.5 * Math.sin(r);
-            svg += '<rect x="'+(sx-0.9)+'" y="'+(sy-0.9)+'" width="1.8" height="1.8" fill="'+(isTS?'#fbbf24':'#e5e7eb')+'" stroke="'+(isTS?'#f59e0b':'#9ca3af')+'" stroke-width="0.3" rx="0.3"/>';
-        });
+['VIP 1','VIP 2','VIP 3'].forEach(table => {
+    const p = getTablePosition(table);
+    const isT = table === target.no_meja;
+    
+    // PENTING: VIP 2 ada 5 kerusi, VIP 1 & 3 ada 8 kerusi
+    const angles = table === 'VIP 2' 
+        ? [0, 72, 144, 216, 288]  // 5 kerusi untuk VIP 2 (360/5 = 72 degrees)
+        : [0, 45, 90, 135, 180, 225, 270, 315];  // 8 kerusi untuk VIP 1 & 3
+    
+    svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="6" fill="'+(isT?'#3b82f6':'#fff')+'" stroke="'+(isT?'#1d4ed8':'#9ca3af')+'" stroke-width="'+(isT?'0.8':'0.5')+'" '+(isT?'class="animate-pulse"':'')+'/>';
+    svg += '<text x="'+p.x+'" y="'+(p.y-0.8)+'" text-anchor="middle" font-size="1.6" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">MEJA</text>';
+    svg += '<text x="'+p.x+'" y="'+(p.y+1.5)+'" text-anchor="middle" font-size="2" fill="'+(isT?'#fff':'#374151')+'" font-weight="bold">'+table.replace('VIP ','')+'</text>';
+    
+    angles.forEach((a,i) => {
+        const chairNumber = (i+1).toString();
+        const targetChair = target.no_kerusi ? target.no_kerusi.toString().trim() : '';
+        const isTS = isT && chairNumber === targetChair;
+        
+        const r = (a * Math.PI) / 180;
+        const sx = p.x + 7.5 * Math.cos(r);
+        const sy = p.y + 7.5 * Math.sin(r);
+        svg += '<rect x="'+(sx-0.9)+'" y="'+(sy-0.9)+'" width="1.8" height="1.8" fill="'+(isTS?'#fbbf24':'#e5e7eb')+'" stroke="'+(isTS?'#f59e0b':'#9ca3af')+'" stroke-width="0.3" rx="0.3"/>';
     });
+});
     
     for(let i=1;i<=25;i++){
         const table = 'Meja '+i;
