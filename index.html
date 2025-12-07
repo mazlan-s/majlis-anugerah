@@ -298,11 +298,11 @@ function handleSearch() {
 
 function showUrusetiaPanel() {
     const password = prompt("Masukkan password urusetia:");
-    if (password === "majlis2024") { // Ganti dengan password anda
+    if (password === "urusetia123") { // GANTI PASSWORD INI!
         state.currentView = 'urusetia';
         render();
     } else if (password !== null) {
-        alert("Password salah!");
+        alert("❌ Password salah! Cuba lagi.");
     }
 }
 
